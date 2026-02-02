@@ -63,6 +63,7 @@ export const venues = mysqlTable("venues", {
 
 export const leagues = mysqlTable("leagues", {
   id: int("id").autoincrement().primaryKey(),
+  apiFootballId: int("apiFootballId").unique(),
   name: varchar("name", { length: 255 }).notNull(),
   type: mysqlEnum("type", ["League", "Cup"]).notNull(),
   logo: text("logo"), // URL to league logo

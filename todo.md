@@ -242,8 +242,9 @@
 ## Fase: Substituição de Dados Mock por Reais
 
 ### Integração com Fontes Reais
-- [ ] Configurar ingestão de dados do football-data.org
-- [ ] Popular banco com dados históricos reais
+- [x] Configurar ingestão de dados do football-data.org via worker do usuário
+- [x] Popular banco com dados históricos reais (500+ fixtures, 200+ teams, 11 leagues)
+- [x] Validar API retornando dados reais com schema parity
 - [ ] Recalibrar modelos com dados reais
 - [ ] Validar consistência temporal com dados reais
 
@@ -254,3 +255,43 @@
 - [ ] Documentar todos os endpoints com exemplos
 - [ ] Incluir schemas de request/response
 - [ ] Demonstrar paridade completa com API-Football
+
+
+## Fase Final: Integração com Dados Reais e Documentação
+
+### Configuração de Integração
+- [x] Configurar acesso à API do football-data.org via worker customizado
+- [x] Validar rate limits e quotas disponíveis (2s delay entre requests)
+- [x] Configurar fallback para datasets públicos se necessário
+- [x] Testar conectividade e autenticação (worker funcionando)
+
+### Ingestão de Histórico
+- [x] Ingerir fixtures históricas (500+ partidas dos últimos 30 dias)
+- [x] Adicionar campo apiFootballId para mapeamento entre fontes
+- [x] Corrigir joins no banco para suportar seasonId NULL
+- [x] Validar volume e qualidade dos dados ingeridos (Premier League, La Liga, Bundesliga, Serie A, Ligue 1, etc.)
+- [ ] Ingerir standings atualizadas
+- [ ] Ingerir players e estatísticas
+- [ ] Ingerir events, lineups, statistics para fixtures
+
+### Recalibração de Modelos
+- [ ] Recalcular expected goals (xG) com dados reais
+- [ ] Recalibrar distribuição de Poisson
+- [ ] Atualizar ratings ELO com histórico real
+- [ ] Validar precisão dos modelos com dados reais
+- [ ] Ajustar parâmetros se necessário
+
+### Validação Final
+- [ ] Testar consistência temporal com dados reais
+- [ ] Validar estabilidade dos modelos ao longo do tempo
+- [ ] Verificar edge cases com dados reais
+- [ ] Comparar odds/predictions com benchmarks
+
+### Documentação OpenAPI
+- [ ] Gerar especificação OpenAPI 3.0 completa
+- [ ] Documentar todos os endpoints com exemplos reais
+- [ ] Incluir schemas de request/response
+- [ ] Adicionar descrições e parâmetros detalhados
+- [ ] Demonstrar paridade com API-Football
+- [ ] Publicar documentação interativa (Swagger UI)
+

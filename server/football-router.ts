@@ -257,7 +257,7 @@ const fixturesProcedure = publicProcedure
           country: data.country?.name || null,
           logo: data.league.logo,
           flag: data.country?.flag || null,
-          season: data.season.year,
+          season: data.season?.year || new Date(data.fixture.date).getFullYear(),
           round: data.fixture.round,
         },
         teams: {

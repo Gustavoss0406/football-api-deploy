@@ -298,7 +298,7 @@ export async function getFixtures(filters?: {
     })
     .from(fixtures)
     .innerJoin(leagues, eq(fixtures.leagueId, leagues.id))
-    .innerJoin(seasons, eq(fixtures.seasonId, seasons.id))
+    .leftJoin(seasons, eq(fixtures.seasonId, seasons.id))
     .leftJoin(venues, eq(fixtures.venueId, venues.id))
     .leftJoin(countries, eq(leagues.countryId, countries.id));
 
