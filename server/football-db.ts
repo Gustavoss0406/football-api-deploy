@@ -6,12 +6,12 @@
  */
 
 import { eq, and, or, gte, lte, like, desc, asc, sql, inArray } from "drizzle-orm";
-import { alias } from "drizzle-orm/mysql-core";
 import { getDb } from "./db";
 import {
   countries, leagues, seasons, teams, venues, fixtures, standings,
   players, playerStatistics, coaches, transfers, injuries, trophies,
   odds, predictions, timezones,
+  fixtureEvents, fixtureLineups, fixtureStatistics,
   type Country, type League, type Season, type Team, type Venue,
   type Fixture, type Standing, type Player, type PlayerStatistic
 } from "../drizzle/schema";
@@ -286,25 +286,19 @@ export async function getFixtures(filters?: {
   const db = await getDb();
   if (!db) return [];
 
-  // Create proper aliases for home and away teams using Drizzle's alias() function
-  const homeTeams = alias(teams, "homeTeams");
-  const awayTeams = alias(teams, "awayTeams");
-  
+  // Query fixtures with league, season, venue, and country data
+  // Note: Home and away team data will be fetched separately to avoid alias issues
   let query = db
     .select({
       fixture: fixtures,
       league: leagues,
       season: seasons,
-      homeTeam: homeTeams,
-      awayTeam: awayTeams,
       venue: venues,
       country: countries,
     })
     .from(fixtures)
     .innerJoin(leagues, eq(fixtures.leagueId, leagues.id))
     .innerJoin(seasons, eq(fixtures.seasonId, seasons.id))
-    .innerJoin(homeTeams, eq(fixtures.homeTeamId, homeTeams.id))
-    .innerJoin(awayTeams, eq(fixtures.awayTeamId, awayTeams.id))
     .leftJoin(venues, eq(fixtures.venueId, venues.id))
     .leftJoin(countries, eq(leagues.countryId, countries.id));
 
@@ -476,4 +470,101 @@ export async function getPlayerStatistics(filters: {
   }
 
   return await query;
+}
+
+// ============================================================================
+// FIXTURES ADVANCED
+// ============================================================================
+
+/**
+ * Get fixture events (goals, cards, substitutions)
+ */
+export async function getFixtureEvents(params: { fixture?: number }) {
+  const db = await getDb();
+  if (!db) return [];
+
+  // Import fixtureEvents from schema
+  const { fixtureEvents } = await import("../drizzle/schema");
+
+  const conditions = [];
+  
+  if (params.fixture) {
+    conditions.push(eq(fixtureEvents.fixtureId, params.fixture));
+  }
+
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const events = await db
+    .select({
+      event: fixtureEvents,
+      team: teams,
+      player: players,
+    })
+    .from(fixtureEvents)
+    .leftJoin(teams, eq(fixtureEvents.teamId, teams.id))
+    .leftJoin(players, eq(fixtureEvents.playerId, players.id))
+    .where(where)
+    .orderBy(asc(fixtureEvents.timeElapsed));
+
+  return events;
+}
+
+/**
+ * Get fixture lineups (starting XI, substitutes, formation)
+ */
+export async function getFixtureLineups(params: { fixture?: number; team?: number }) {
+  const db = await getDb();
+  if (!db) return [];
+
+  // Import fixtureLineups from schema
+  const { fixtureLineups } = await import("../drizzle/schema");
+
+  const conditions = [];
+  
+  if (params.fixture) {
+    conditions.push(eq(fixtureLineups.fixtureId, params.fixture));
+  }
+
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const lineups = await db
+    .select({
+      lineup: fixtureLineups,
+      team: teams,
+    })
+    .from(fixtureLineups)
+    .leftJoin(teams, eq(fixtureLineups.teamId, teams.id))
+    .where(where);
+
+  return lineups;
+}
+
+/**
+ * Get fixture statistics (shots, possession, passes, etc.)
+ */
+export async function getFixtureStatistics(params: { fixture?: number; team?: number }) {
+  const db = await getDb();
+  if (!db) return [];
+
+  // Import fixtureStatistics from schema
+  const { fixtureStatistics } = await import("../drizzle/schema");
+
+  const conditions = [];
+  
+  if (params.fixture) {
+    conditions.push(eq(fixtureStatistics.fixtureId, params.fixture));
+  }
+
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const statistics = await db
+    .select({
+      statistic: fixtureStatistics,
+      team: teams,
+    })
+    .from(fixtureStatistics)
+    .leftJoin(teams, eq(fixtureStatistics.teamId, teams.id))
+    .where(where);
+
+  return statistics;
 }

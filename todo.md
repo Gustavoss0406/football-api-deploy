@@ -83,3 +83,33 @@
 - [x] Validação externa: GET /players (20 results)
 - [x] Relatório de validação externa
 - [x] Gate aprovado para avançar
+
+## Fase: Fixtures Avançados (Ordem Obrigatória)
+
+### Schema e Database
+- [x] Estender schema para fixture events (gols, cartões, substituições)
+- [x] Estender schema para fixture lineups (escalações, formações)
+- [x] Estender schema para fixture statistics (estatísticas detalhadas)
+- [x] Helpers de banco de dados para fixtures avançados
+
+### Endpoints
+- [x] GET /fixtures/events - Eventos de partida
+- [x] GET /fixtures/lineups - Escalações e formações
+- [x] GET /fixtures/statistics - Estatísticas detalhadas
+
+### Edge Cases
+- [x] Jogos sem eventos registrados
+- [x] Jogos sem escalação disponível
+- [x] Estatísticas parciais ou incompletas
+
+### Validação
+- [x] Validação estrutural dos fixtures avançados
+- [x] Testes unitários para edge cases
+- [ ] Checkpoint de paridade rápido
+
+### Ingestão Automatizada (Após Fixtures Avançados)
+- [ ] Workers de sincronização periódica
+- [ ] Persistência local como fonte primária
+- [ ] Integração com football-data.org
+- [ ] Cache agressivo e fallback
+- [ ] Sistema de retry e error handling

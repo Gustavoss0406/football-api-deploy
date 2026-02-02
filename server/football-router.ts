@@ -16,6 +16,9 @@ import {
   getFixtures,
   getPlayers,
   getPlayerStatistics,
+  getFixtureEvents,
+  getFixtureLineups,
+  getFixtureStatistics,
 } from "./football-db";
 import {
   normalizeCountry,
@@ -301,8 +304,126 @@ const playersProcedure = publicProcedure
   });
 
 /**
- * Export the football router
+ * Fixtures Events endpoint - returns match events (goals, cards, substitutions)
  */
+const fixturesEventsProcedure = publicProcedure
+  .input(
+    z.object({
+      fixture: z.number().optional(),
+    }).optional()
+  )
+  .query(async ({ input }) => {
+    if (!input?.fixture) {
+      return createApiResponse([]);
+    }
+
+    const events = await getFixtureEvents({ fixture: input.fixture });
+    
+    // Edge case: No events recorded
+    if (events.length === 0) {
+      return createApiResponse([]);
+    }
+
+    // Normalize events to API-Football format
+    const normalized = events.map((row: any) => ({
+      time: {
+        elapsed: row.event.timeElapsed,
+        extra: row.event.timeExtra,
+      },
+      team: row.team ? {
+        id: row.team.id,
+        name: row.team.name,
+        logo: row.team.logo,
+      } : null,
+      player: row.player ? {
+        id: row.player.id,
+        name: row.player.name,
+      } : null,
+      assist: row.assistPlayer ? {
+        id: row.assistPlayer.id,
+        name: row.assistPlayer.name,
+      } : null,
+      type: row.event.type,
+      detail: row.event.detail,
+      comments: row.event.comments,
+    }));
+
+    return createApiResponse(normalized);
+  });
+
+/**
+ * Fixtures Lineups endpoint - returns team lineups and formations
+ */
+const fixturesLineupsProcedure = publicProcedure
+  .input(
+    z.object({
+      fixture: z.number().optional(),
+      team: z.number().optional(),
+    }).optional()
+  )
+  .query(async ({ input }) => {
+    if (!input?.fixture) {
+      return createApiResponse([]);
+    }
+
+    const lineups = await getFixtureLineups({ fixture: input.fixture, team: input?.team });
+    
+    // Edge case: No lineups available
+    if (lineups.length === 0) {
+      return createApiResponse([]);
+    }
+
+    // Normalize lineups to API-Football format
+    const normalized = lineups.map((row: any) => ({
+      team: row.team ? {
+        id: row.team.id,
+        name: row.team.name,
+        logo: row.team.logo,
+        colors: row.team.colors ? JSON.parse(row.team.colors) : null,
+      } : null,
+      formation: row.lineup.formation,
+      startXI: row.lineup.startXI,
+      substitutes: row.lineup.substitutes,
+      coach: row.lineup.coach,
+    }));
+
+    return createApiResponse(normalized);
+  });
+
+/**
+ * Fixtures Statistics endpoint - returns detailed match statistics
+ */
+const fixturesStatisticsProcedure = publicProcedure
+  .input(
+    z.object({
+      fixture: z.number().optional(),
+      team: z.number().optional(),
+    }).optional()
+  )
+  .query(async ({ input }) => {
+    if (!input?.fixture) {
+      return createApiResponse([]);
+    }
+
+    const statistics = await getFixtureStatistics({ fixture: input.fixture, team: input?.team });
+    
+    // Edge case: No statistics available or partial statistics
+    if (statistics.length === 0) {
+      return createApiResponse([]);
+    }
+
+    // Normalize statistics to API-Football format
+    const normalized = statistics.map((row: any) => ({
+      team: row.team ? {
+        id: row.team.id,
+        name: row.team.name,
+        logo: row.team.logo,
+      } : null,
+      statistics: row.statistic.statistics,
+    }));
+
+    return createApiResponse(normalized);
+  });
 export const footballRouter = router({
   status: statusProcedure,
   timezone: timezoneProcedure,
@@ -311,5 +432,8 @@ export const footballRouter = router({
   teams: teamsProcedure,
   standings: standingsProcedure,
   fixtures: fixturesProcedure,
+  fixturesEvents: fixturesEventsProcedure,
+  fixturesLineups: fixturesLineupsProcedure,
+  fixturesStatistics: fixturesStatisticsProcedure,
   players: playersProcedure,
 });
