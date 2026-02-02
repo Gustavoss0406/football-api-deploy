@@ -54,3 +54,22 @@
 - [ ] Testes de snapshot para validação de schema
 - [ ] Documentação da API
 - [ ] Gate de paridade final
+
+## Checkpoint de Validação Externa
+
+- [ ] Popular banco de dados com dados reais do football-data.org
+- [ ] Criar seed data para timezones e países
+- [ ] Comparar schema de resposta /fixtures com API-Football oficial
+- [ ] Testar filtros combinados (league + season + team + date range)
+- [ ] Validar edge case: Fixture futura sem placar
+- [ ] Validar edge case: Player sem estatística
+- [ ] Validar edge case: Liga sem standings
+- [ ] Gerar relatório de paridade estrutural
+
+## Validação Estrutural (CI)
+
+- [x] Script de validação de schema TypeScript/Zod vs API-Football
+- [x] Validação de campos obrigatórios e tipos de dados
+- [x] Validação de estruturas aninhadas e enums
+- [x] Testes de filtros combinados com dados mock
+- [x] Integração do script no CI para evitar regressões
