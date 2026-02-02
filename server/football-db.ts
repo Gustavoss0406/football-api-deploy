@@ -1,0 +1,479 @@
+/**
+ * Database query helpers for Football Data Platform
+ * 
+ * This module provides typed query functions for all football entities.
+ * All functions return raw Drizzle results for use in tRPC procedures.
+ */
+
+import { eq, and, or, gte, lte, like, desc, asc, sql, inArray } from "drizzle-orm";
+import { alias } from "drizzle-orm/mysql-core";
+import { getDb } from "./db";
+import {
+  countries, leagues, seasons, teams, venues, fixtures, standings,
+  players, playerStatistics, coaches, transfers, injuries, trophies,
+  odds, predictions, timezones,
+  type Country, type League, type Season, type Team, type Venue,
+  type Fixture, type Standing, type Player, type PlayerStatistic
+} from "../drizzle/schema";
+
+// ============================================================================
+// CORE ENTITIES
+// ============================================================================
+
+/**
+ * Get all countries with optional filters
+ */
+export async function getCountries(filters?: {
+  name?: string;
+  code?: string;
+  search?: string;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+
+  let query = db.select().from(countries);
+
+  if (filters?.name) {
+    query = query.where(eq(countries.name, filters.name)) as any;
+  } else if (filters?.code) {
+    query = query.where(eq(countries.code, filters.code)) as any;
+  } else if (filters?.search) {
+    query = query.where(like(countries.name, `%${filters.search}%`)) as any;
+  }
+
+  return await query;
+}
+
+/**
+ * Get country by ID
+ */
+export async function getCountryById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db.select().from(countries).where(eq(countries.id, id)).limit(1);
+  return result[0] || null;
+}
+
+/**
+ * Get all timezones
+ */
+export async function getTimezones() {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(timezones);
+}
+
+/**
+ * Get leagues with optional filters
+ */
+export async function getLeagues(filters?: {
+  id?: number;
+  name?: string;
+  country?: string;
+  code?: string;
+  season?: number;
+  team?: number;
+  type?: "League" | "Cup";
+  current?: boolean;
+  search?: string;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+
+  // Build the query with joins
+  let query = db
+    .select({
+      league: leagues,
+      country: countries,
+      seasons: seasons,
+    })
+    .from(leagues)
+    .leftJoin(countries, eq(leagues.countryId, countries.id))
+    .leftJoin(seasons, eq(seasons.leagueId, leagues.id));
+
+  const conditions: any[] = [];
+
+  if (filters?.id) {
+    conditions.push(eq(leagues.id, filters.id));
+  }
+  if (filters?.name) {
+    conditions.push(like(leagues.name, `%${filters.name}%`));
+  }
+  if (filters?.type) {
+    conditions.push(eq(leagues.type, filters.type));
+  }
+  if (filters?.country) {
+    conditions.push(like(countries.name, `%${filters.country}%`));
+  }
+  if (filters?.search) {
+    conditions.push(like(leagues.name, `%${filters.search}%`));
+  }
+  if (filters?.current !== undefined) {
+    conditions.push(eq(seasons.current, filters.current));
+  }
+  if (filters?.season) {
+    conditions.push(eq(seasons.year, filters.season));
+  }
+
+  if (conditions.length > 0) {
+    query = query.where(and(...conditions)) as any;
+  }
+
+  const results = await query;
+
+  // Group seasons by league
+  const leaguesMap = new Map<number, any>();
+  
+  results.forEach((row: any) => {
+    if (!leaguesMap.has(row.league.id)) {
+      leaguesMap.set(row.league.id, {
+        league: row.league,
+        country: row.country,
+        seasons: [],
+      });
+    }
+    
+    if (row.seasons) {
+      const leagueData = leaguesMap.get(row.league.id);
+      if (!leagueData.seasons.find((s: any) => s.id === row.seasons.id)) {
+        leagueData.seasons.push(row.seasons);
+      }
+    }
+  });
+
+  return Array.from(leaguesMap.values());
+}
+
+/**
+ * Get teams with optional filters
+ */
+export async function getTeams(filters?: {
+  id?: number;
+  name?: string;
+  league?: number;
+  season?: number;
+  country?: string;
+  code?: string;
+  venue?: number;
+  search?: string;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+
+  let query = db
+    .select({
+      team: teams,
+      venue: venues,
+      country: countries,
+    })
+    .from(teams)
+    .leftJoin(venues, eq(teams.venueId, venues.id))
+    .leftJoin(countries, eq(teams.countryId, countries.id));
+
+  const conditions: any[] = [];
+
+  if (filters?.id) {
+    conditions.push(eq(teams.id, filters.id));
+  }
+  if (filters?.name) {
+    conditions.push(like(teams.name, `%${filters.name}%`));
+  }
+  if (filters?.code) {
+    conditions.push(eq(teams.code, filters.code));
+  }
+  if (filters?.country) {
+    conditions.push(like(countries.name, `%${filters.country}%`));
+  }
+  if (filters?.venue) {
+    conditions.push(eq(teams.venueId, filters.venue));
+  }
+  if (filters?.search) {
+    conditions.push(like(teams.name, `%${filters.search}%`));
+  }
+
+  if (conditions.length > 0) {
+    query = query.where(and(...conditions)) as any;
+  }
+
+  return await query;
+}
+
+/**
+ * Get standings with filters
+ */
+export async function getStandings(filters: {
+  league: number;
+  season: number;
+  team?: number;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+
+  let query = db
+    .select({
+      standing: standings,
+      team: teams,
+      league: leagues,
+      season: seasons,
+      country: countries,
+    })
+    .from(standings)
+    .innerJoin(teams, eq(standings.teamId, teams.id))
+    .innerJoin(leagues, eq(standings.leagueId, leagues.id))
+    .innerJoin(seasons, eq(standings.seasonId, seasons.id))
+    .leftJoin(countries, eq(leagues.countryId, countries.id))
+    .where(
+      and(
+        eq(standings.leagueId, filters.league),
+        eq(standings.seasonId, filters.season)
+      )
+    )
+    .orderBy(asc(standings.rank));
+
+  if (filters.team) {
+    query = db
+      .select({
+        standing: standings,
+        team: teams,
+        league: leagues,
+        season: seasons,
+        country: countries,
+      })
+      .from(standings)
+      .innerJoin(teams, eq(standings.teamId, teams.id))
+      .innerJoin(leagues, eq(standings.leagueId, leagues.id))
+      .innerJoin(seasons, eq(standings.seasonId, seasons.id))
+      .leftJoin(countries, eq(leagues.countryId, countries.id))
+      .where(
+        and(
+          eq(standings.leagueId, filters.league),
+          eq(standings.seasonId, filters.season),
+          eq(standings.teamId, filters.team)
+        )
+      )
+      .orderBy(asc(standings.rank)) as any;
+  }
+
+  return await query;
+}
+
+// ============================================================================
+// FIXTURES
+// ============================================================================
+
+/**
+ * Get fixtures with comprehensive filters
+ */
+export async function getFixtures(filters?: {
+  id?: number;
+  ids?: number[];
+  live?: string; // "all" or specific league IDs
+  date?: string; // YYYY-MM-DD
+  league?: number;
+  season?: number;
+  team?: number;
+  last?: number;
+  next?: number;
+  from?: string; // YYYY-MM-DD
+  to?: string; // YYYY-MM-DD
+  round?: string;
+  status?: string;
+  venue?: number;
+  timezone?: string;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+
+  // Create proper aliases for home and away teams using Drizzle's alias() function
+  const homeTeams = alias(teams, "homeTeams");
+  const awayTeams = alias(teams, "awayTeams");
+  
+  let query = db
+    .select({
+      fixture: fixtures,
+      league: leagues,
+      season: seasons,
+      homeTeam: homeTeams,
+      awayTeam: awayTeams,
+      venue: venues,
+      country: countries,
+    })
+    .from(fixtures)
+    .innerJoin(leagues, eq(fixtures.leagueId, leagues.id))
+    .innerJoin(seasons, eq(fixtures.seasonId, seasons.id))
+    .innerJoin(homeTeams, eq(fixtures.homeTeamId, homeTeams.id))
+    .innerJoin(awayTeams, eq(fixtures.awayTeamId, awayTeams.id))
+    .leftJoin(venues, eq(fixtures.venueId, venues.id))
+    .leftJoin(countries, eq(leagues.countryId, countries.id));
+
+  const conditions: any[] = [];
+
+  if (filters?.id) {
+    conditions.push(eq(fixtures.id, filters.id));
+  }
+  if (filters?.ids && filters.ids.length > 0) {
+    conditions.push(inArray(fixtures.id, filters.ids));
+  }
+  if (filters?.live === "all") {
+    conditions.push(
+      or(
+        eq(fixtures.statusShort, "LIVE"),
+        eq(fixtures.statusShort, "HT"),
+        eq(fixtures.statusShort, "ET"),
+        eq(fixtures.statusShort, "P")
+      )
+    );
+  }
+  if (filters?.date) {
+    const dateStart = new Date(filters.date);
+    const dateEnd = new Date(filters.date);
+    dateEnd.setDate(dateEnd.getDate() + 1);
+    conditions.push(
+      and(
+        gte(fixtures.date, dateStart),
+        lte(fixtures.date, dateEnd)
+      )
+    );
+  }
+  if (filters?.league) {
+    conditions.push(eq(fixtures.leagueId, filters.league));
+  }
+  if (filters?.season) {
+    conditions.push(eq(fixtures.seasonId, filters.season));
+  }
+  if (filters?.team) {
+    conditions.push(
+      or(
+        eq(fixtures.homeTeamId, filters.team),
+        eq(fixtures.awayTeamId, filters.team)
+      )
+    );
+  }
+  if (filters?.from && filters?.to) {
+    conditions.push(
+      and(
+        gte(fixtures.date, new Date(filters.from)),
+        lte(fixtures.date, new Date(filters.to))
+      )
+    );
+  }
+  if (filters?.round) {
+    conditions.push(like(fixtures.round, `%${filters.round}%`));
+  }
+  if (filters?.status) {
+    conditions.push(eq(fixtures.statusShort, filters.status));
+  }
+  if (filters?.venue) {
+    conditions.push(eq(fixtures.venueId, filters.venue));
+  }
+
+  if (conditions.length > 0) {
+    query = query.where(and(...conditions)) as any;
+  }
+
+  // Handle last/next filters
+  if (filters?.last) {
+    query = query
+      .where(lte(fixtures.date, new Date()))
+      .orderBy(desc(fixtures.date))
+      .limit(filters.last) as any;
+  } else if (filters?.next) {
+    query = query
+      .where(gte(fixtures.date, new Date()))
+      .orderBy(asc(fixtures.date))
+      .limit(filters.next) as any;
+  } else {
+    query = query.orderBy(asc(fixtures.date)) as any;
+  }
+
+  return await query;
+}
+
+// ============================================================================
+// PLAYERS
+// ============================================================================
+
+/**
+ * Get players with optional filters
+ */
+export async function getPlayers(filters?: {
+  id?: number;
+  name?: string;
+  team?: number;
+  league?: number;
+  season?: number;
+  search?: string;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+
+  let query = db.select().from(players);
+
+  const conditions: any[] = [];
+
+  if (filters?.id) {
+    conditions.push(eq(players.id, filters.id));
+  }
+  if (filters?.name) {
+    conditions.push(like(players.name, `%${filters.name}%`));
+  }
+  if (filters?.search) {
+    conditions.push(like(players.name, `%${filters.search}%`));
+  }
+
+  if (conditions.length > 0) {
+    query = query.where(and(...conditions)) as any;
+  }
+
+  return await query;
+}
+
+/**
+ * Get player statistics
+ */
+export async function getPlayerStatistics(filters: {
+  player?: number;
+  team?: number;
+  league?: number;
+  season?: number;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+
+  let query = db
+    .select({
+      statistics: playerStatistics,
+      player: players,
+      team: teams,
+      league: leagues,
+      season: seasons,
+    })
+    .from(playerStatistics)
+    .innerJoin(players, eq(playerStatistics.playerId, players.id))
+    .innerJoin(teams, eq(playerStatistics.teamId, teams.id))
+    .innerJoin(leagues, eq(playerStatistics.leagueId, leagues.id))
+    .innerJoin(seasons, eq(playerStatistics.seasonId, seasons.id));
+
+  const conditions: any[] = [];
+
+  if (filters.player) {
+    conditions.push(eq(playerStatistics.playerId, filters.player));
+  }
+  if (filters.team) {
+    conditions.push(eq(playerStatistics.teamId, filters.team));
+  }
+  if (filters.league) {
+    conditions.push(eq(playerStatistics.leagueId, filters.league));
+  }
+  if (filters.season) {
+    conditions.push(eq(playerStatistics.seasonId, filters.season));
+  }
+
+  if (conditions.length > 0) {
+    query = query.where(and(...conditions)) as any;
+  }
+
+  return await query;
+}
