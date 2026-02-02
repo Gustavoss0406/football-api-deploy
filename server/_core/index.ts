@@ -7,6 +7,10 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 
+// 🔹 DB
+import { db } from "../db";
+import { sql } from "drizzle-orm";
+
 async function startServer() {
   const app = express();
   const server = createServer(app);
@@ -18,10 +22,23 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
   // --------------------------------------------------
-  // Health check (REST, simples, sem dependências)
+  // Health check (app)
   // --------------------------------------------------
   app.get("/health", (_req, res) => {
     res.status(200).json({ ok: true });
+  });
+
+  // --------------------------------------------------
+  // Health check (database)
+  // --------------------------------------------------
+  app.get("/health/db", async (_req, res) => {
+    try {
+      await db.execute(sql`select 1`);
+      res.status(200).json({ ok: true, db: "connected" });
+    } catch (err) {
+      console.error("DB health check failed:", err);
+      res.status(500).json({ ok: false, db: "error" });
+    }
   });
 
   // --------------------------------------------------
