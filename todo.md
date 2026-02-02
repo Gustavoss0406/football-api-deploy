@@ -319,3 +319,12 @@
 - [x] Gerar documentação OpenAPI completa com exemplos reais
 - [x] Demonstrar paridade total com API-Football v3
 - [x] Incluir guia de migração drop-in replacement
+
+
+## Bugs Reportados
+
+- [ ] Fix "Failed to fetch" error on homepage (TRPCClientError)
+
+- [ ] Preparar arquivos para deploy no Render.com (gratuito)
+- [ ] Criar guia passo a passo de deployment
+- [ ] Configurar variáveis de ambiente para produção
