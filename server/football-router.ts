@@ -204,11 +204,30 @@ const fixturesProcedure = publicProcedure
   .query(async ({ input }) => {
     const fixturesData = await getFixtures(input);
     
-    // Note: The getFixtures query needs to be fixed to properly join teams
-    // For now, we'll return a simplified response
+    // Fetch all unique team IDs
+    const teamIds = new Set<number>();
+    fixturesData.forEach((data: any) => {
+      teamIds.add(data.fixture.homeTeamId);
+      teamIds.add(data.fixture.awayTeamId);
+    });
+    
+    // Batch fetch all teams
+    const { teams } = await import("../drizzle/schema");
+    const { inArray } = await import("drizzle-orm");
+    const { getDb } = await import("./db");
+    const db = await getDb();
+    
+    if (!db) {
+      return createApiResponse([]);
+    }
+    
+    const allTeams = await db.select().from(teams).where(inArray(teams.id, Array.from(teamIds)));
+    const teamsMap = new Map(allTeams.map(t => [t.id, t]));
+    
     const normalized = fixturesData.map((data: any) => {
-      // This is a simplified version - needs proper implementation
-      // with correct team joins
+      const homeTeam = teamsMap.get(data.fixture.homeTeamId);
+      const awayTeam = teamsMap.get(data.fixture.awayTeamId);
+      
       return {
         fixture: {
           id: data.fixture.id,
@@ -242,15 +261,15 @@ const fixturesProcedure = publicProcedure
         },
         teams: {
           home: {
-            id: data.homeTeam.id,
-            name: data.homeTeam.name,
-            logo: data.homeTeam.logo,
+            id: homeTeam?.id || data.fixture.homeTeamId,
+            name: homeTeam?.name || "Unknown",
+            logo: homeTeam?.logo || null,
             winner: data.fixture.homeWinner,
           },
           away: {
-            id: data.awayTeam.id,
-            name: data.awayTeam.name,
-            logo: data.awayTeam.logo,
+            id: awayTeam?.id || data.fixture.awayTeamId,
+            name: awayTeam?.name || "Unknown",
+            logo: awayTeam?.logo || null,
             winner: data.fixture.awayWinner,
           },
         },

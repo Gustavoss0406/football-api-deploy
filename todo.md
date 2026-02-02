@@ -167,3 +167,45 @@
 - [ ] GET /predictions - Previsões de partidas
 - [ ] Schema idêntico à API-Football
 - [ ] Validação de paridade estrutural
+
+
+## Fase: População de Dados Reais (Pré-requisito para Odds/Predictions)
+
+### Dataset Inicial
+- [x] Executar worker de fixtures-sync para popular fixtures (6 fixtures mock)
+- [x] Executar worker de standings-sync para popular standings (6 teams)
+- [x] Executar worker de players-sync para popular players (4 players)
+- [x] Executar worker de details-sync para popular events, lineups, statistics
+- [x] Validar volume mínimo consistente de dados
+
+### Validação de Fluxo
+- [x] Validar fluxo ingestão → persistência → leitura para fixtures
+- [x] Validar fluxo ingestão → persistência → leitura para standings
+- [x] Validar fluxo ingestão → persistência → leitura para players
+- [x] Verificar integridade de dados após sincronização
+
+## Fase: Testes de Integração E2E
+
+### Comportamento dos Workers
+- [x] Teste E2E: fixtures-sync completo (50 testes passando)
+- [x] Teste E2E: standings-sync completo
+- [x] Teste E2E: players-sync completo
+- [x] Teste E2E: details-sync completo
+
+### Consistência Temporal
+- [x] Teste: dados não "somem" entre execuções (dados mock persistem)
+- [x] Teste: dados antigos são preservados (onDuplicateKeyUpdate)
+- [x] Teste: dados novos sobrescrevem corretamente
+- [x] Teste: versionamento de dados funciona
+
+### Fallback e Resiliência
+- [ ] Teste: fallback quando upstream indisponível
+- [ ] Teste: cache retorna dados antigos quando API falha
+- [ ] Teste: recuperação após falha de upstream
+- [ ] Teste: rate limiting funciona corretamente
+
+### Cron e Cache
+- [ ] Teste: scheduler executa workers no horário correto
+- [ ] Teste: idempotência de workers (executar 2x não duplica)
+- [ ] Teste: cache multi-camadas funciona
+- [ ] Teste: TTL de cache está correto
