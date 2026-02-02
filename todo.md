@@ -126,9 +126,9 @@
 ### Workers de Sincronização
 - [x] Worker para sincronização de fixtures do football-data.org
 - [x] Worker para sincronização de standings
-- [ ] Worker para sincronização de players
-- [ ] Worker para sincronização de events, lineups, statistics
-- [ ] Scheduler para execução periódica dos workers
+- [x] Worker para sincronização de players
+- [x] Worker para sincronização de events, lineups, statistics
+- [x] Scheduler para execução periódica dos workers
 
 ### Persistência e Cache
 - [x] Persistência local como fonte primária
@@ -142,13 +142,12 @@
 - [ ] Validação de sincronização periódica
 - [ ] Checkpoint de consistência
 
-## Fase: Endpoints Restantes (Após Ingestão)
+## Fase: Endpoints Restantes (Ap## Fase: Endpoints Restantes (Paridade Total)
 
-### Implementação
-- [ ] GET /injuries - Lesões de jogadores
-- [ ] GET /transfers - Transferências de jogadores
-- [ ] GET /coachs - Informações de técnicos
-- [ ] GET /trophies - Troféus de times e jogadores
+- [x] GET /injuries - Lesões de jogadores
+- [x] GET /transfers - Transferências de jogadores
+- [x] GET /coachs - Técnicos
+- [x] GET /trophies - Troféus de times e jogadores
 
 ### Validação
 - [ ] Testes unitários para endpoints restantes

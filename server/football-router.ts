@@ -458,5 +458,102 @@ export const footballRouter = router({
       const errorMsg = error instanceof Error ? error.message : String(error);
       return createApiResponse([], [errorMsg]);
     }
+   }),
+  
+  // Scheduler endpoints
+  runAllWorkers: publicProcedure.mutation(async () => {
+    try {
+      const { executeAllWorkers } = await import("./workers/scheduler");
+      const result = await executeAllWorkers();
+      return createApiResponse([result]);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      return createApiResponse([], [errorMsg]);
+    }
   }),
+
+  runScheduledEvent: publicProcedure
+    .input(z.object({ scheduledTime: z.string().optional() }).optional())
+    .mutation(async ({ input }) => {
+      try {
+        const { handleScheduledEvent } = await import("./workers/scheduler");
+        const scheduledTime = input?.scheduledTime ? new Date(input.scheduledTime) : new Date();
+        const result = await handleScheduledEvent(scheduledTime);
+        return createApiResponse([result]);
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        return createApiResponse([], [errorMsg]);
+      }
+    }),
+  
+  // Remaining endpoints for full API-Football parity
+  injuries: publicProcedure
+    .input(z.object({
+      league: z.number().optional(),
+      season: z.number().optional(),
+      fixture: z.number().optional(),
+      team: z.number().optional(),
+      player: z.number().optional(),
+      date: z.string().optional(),
+      timezone: z.string().optional(),
+    }).optional())
+    .query(async ({ input }) => {
+      try {
+        const { getInjuries } = await import("./football-db");
+        const results = await getInjuries(input || {});
+        return createApiResponse(results);
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        return createApiResponse([], [errorMsg]);
+      }
+    }),
+  
+  transfers: publicProcedure
+    .input(z.object({
+      player: z.number().optional(),
+      team: z.number().optional(),
+    }).optional())
+    .query(async ({ input }) => {
+      try {
+        const { getTransfers } = await import("./football-db");
+        const results = await getTransfers(input || {});
+        return createApiResponse(results);
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        return createApiResponse([], [errorMsg]);
+      }
+    }),
+  
+  coachs: publicProcedure
+    .input(z.object({
+      id: z.number().optional(),
+      team: z.number().optional(),
+      search: z.string().optional(),
+    }).optional())
+    .query(async ({ input }) => {
+      try {
+        const { getCoaches } = await import("./football-db");
+        const results = await getCoaches(input || {});
+        return createApiResponse(results);
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        return createApiResponse([], [errorMsg]);
+      }
+    }),
+  
+  trophies: publicProcedure
+    .input(z.object({
+      player: z.number().optional(),
+      coach: z.number().optional(),
+    }).optional())
+    .query(async ({ input }) => {
+      try {
+        const { getTrophies } = await import("./football-db");
+        const results = await getTrophies(input || {});
+        return createApiResponse(results);
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        return createApiResponse([], [errorMsg]);
+      }
+    }),
 });

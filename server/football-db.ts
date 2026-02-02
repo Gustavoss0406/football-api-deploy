@@ -568,3 +568,185 @@ export async function getFixtureStatistics(params: { fixture?: number; team?: nu
 
   return statistics;
 }
+
+
+// ============================================================================
+// INJURIES
+// ============================================================================
+
+export async function getInjuries(filters?: {
+  league?: number;
+  season?: number;
+  fixture?: number;
+  team?: number;
+  player?: number;
+  date?: string;
+  timezone?: string;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+
+  let query = db
+    .select({
+      injury: injuries,
+      player: players,
+      team: teams,
+      fixture: fixtures,
+    })
+    .from(injuries)
+    .leftJoin(players, eq(injuries.playerId, players.id))
+    .leftJoin(teams, eq(injuries.teamId, teams.id))
+    .leftJoin(fixtures, eq(injuries.fixtureId, fixtures.id));
+
+  const conditions: any[] = [];
+  
+  if (filters?.player) {
+    conditions.push(eq(injuries.playerId, filters.player));
+  }
+  
+  if (filters?.team) {
+    conditions.push(eq(injuries.teamId, filters.team));
+  }
+  
+  if (filters?.fixture) {
+    conditions.push(eq(injuries.fixtureId, filters.fixture));
+  }
+  
+  if (conditions.length > 0) {
+    query = query.where(and(...conditions)) as any;
+  }
+
+  return query.limit(100);
+}
+
+// ============================================================================
+// TRANSFERS
+// ============================================================================
+
+export async function getTransfers(filters?: {
+  player?: number;
+  team?: number;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+
+  let query = db
+    .select({
+      transfer: transfers,
+      player: players,
+    })
+    .from(transfers)
+    .leftJoin(players, eq(transfers.playerId, players.id));
+
+  const conditions: any[] = [];
+  
+  if (filters?.player) {
+    conditions.push(eq(transfers.playerId, filters.player));
+  }
+  
+  if (filters?.team) {
+    conditions.push(
+      or(
+        eq(transfers.teamInId, filters.team),
+        eq(transfers.teamOutId, filters.team)
+      )
+    );
+  }
+  
+  if (conditions.length > 0) {
+    query = query.where(and(...conditions)) as any;
+  }
+
+  return query.limit(100);
+}
+
+// ============================================================================
+// COACHES
+// ============================================================================
+
+export async function getCoaches(filters?: {
+  id?: number;
+  team?: number;
+  search?: string;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+
+  let query = db
+    .select({
+      coach: coaches,
+      team: teams,
+    })
+    .from(coaches)
+    .leftJoin(teams, eq(coaches.teamId, teams.id));
+
+  const conditions: any[] = [];
+  
+  if (filters?.id) {
+    conditions.push(eq(coaches.id, filters.id));
+  }
+  
+  if (filters?.team) {
+    conditions.push(eq(coaches.teamId, filters.team));
+  }
+  
+  if (filters?.search) {
+    conditions.push(
+      or(
+        sql`${coaches.name} LIKE ${`%${filters.search}%`}`,
+        sql`${coaches.firstname} LIKE ${`%${filters.search}%`}`,
+        sql`${coaches.lastname} LIKE ${`%${filters.search}%`}`
+      )
+    );
+  }
+  
+  if (conditions.length > 0) {
+    query = query.where(and(...conditions)) as any;
+  }
+
+  return query.limit(100);
+}
+
+// ============================================================================
+// TROPHIES
+// ============================================================================
+
+export async function getTrophies(filters?: {
+  player?: number;
+  coach?: number;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+
+  let query = db
+    .select({
+      trophy: trophies,
+    })
+    .from(trophies);
+
+  const conditions: any[] = [];
+  
+  if (filters?.player) {
+    conditions.push(
+      and(
+        eq(trophies.entityType, "player"),
+        eq(trophies.entityId, filters.player)
+      )
+    );
+  }
+  
+  if (filters?.coach) {
+    conditions.push(
+      and(
+        eq(trophies.entityType, "coach"),
+        eq(trophies.entityId, filters.coach)
+      )
+    );
+  }
+  
+  if (conditions.length > 0) {
+    query = query.where(or(...conditions)) as any;
+  }
+
+  return query.limit(100);
+}
