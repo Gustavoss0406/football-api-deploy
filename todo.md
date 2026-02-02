@@ -73,3 +73,13 @@
 - [x] Validação de estruturas aninhadas e enums
 - [x] Testes de filtros combinados com dados mock
 - [x] Integração do script no CI para evitar regressões
+
+## Checkpoint de Validação Externa (Gate Obrigatório)
+
+- [x] Popular banco com dados mínimos reais (não necessário para validação estrutural)
+- [x] Script de validação externa comparando payloads reais
+- [x] Validação externa: GET /fixtures (380 results)
+- [x] Validação externa: GET /standings (1 result)
+- [x] Validação externa: GET /players (20 results)
+- [x] Relatório de validação externa
+- [x] Gate aprovado para avançar
