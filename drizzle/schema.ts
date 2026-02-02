@@ -449,6 +449,21 @@ export const predictions = mysqlTable("predictions", {
   fixtureIdx: unique("predictions_fixture_unique").on(table.fixtureId),
 }));
 
+// ELO Ratings for predictions
+export const eloRatings = mysqlTable("elo_ratings", {
+  id: int("id").autoincrement().primaryKey(),
+  teamId: int("teamId").notNull().references(() => teams.id, { onDelete: "cascade" }),
+  seasonId: int("seasonId").notNull().references(() => seasons.id, { onDelete: "cascade" }),
+  rating: decimal("rating", { precision: 7, scale: 2 }).notNull().default("1500.00"),
+  matchesPlayed: int("matchesPlayed").default(0).notNull(),
+  lastUpdated: timestamp("lastUpdated").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  teamSeasonIdx: unique("elo_ratings_team_season_unique").on(table.teamId, table.seasonId),
+  ratingIdx: index("elo_ratings_rating_idx").on(table.rating),
+}));
+
 // ============================================================================
 // METADATA & CACHE
 // ============================================================================
@@ -535,6 +550,9 @@ export type InsertOdds = typeof odds.$inferInsert;
 
 export type Prediction = typeof predictions.$inferSelect;
 export type InsertPrediction = typeof predictions.$inferInsert;
+
+export type EloRating = typeof eloRatings.$inferSelect;
+export type InsertEloRating = typeof eloRatings.$inferInsert;
 
 export type Timezone = typeof timezones.$inferSelect;
 export type InsertTimezone = typeof timezones.$inferInsert;

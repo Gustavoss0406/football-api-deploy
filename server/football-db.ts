@@ -750,3 +750,173 @@ export async function getTrophies(filters?: {
 
   return query.limit(100);
 }
+
+
+// ============================================================================
+// ODDS AND PREDICTIONS
+// ============================================================================
+
+export async function getOdds(filters: {
+  fixtureId?: number;
+  leagueId?: number;
+  season?: number;
+  bookmaker?: string;
+  bet?: string;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const { eloRatings } = await import("../drizzle/schema");
+
+  let query = db
+    .select({
+      odds: odds,
+      fixture: fixtures,
+      league: leagues,
+      season: seasons,
+    })
+    .from(odds)
+    .leftJoin(fixtures, eq(odds.fixtureId, fixtures.id))
+    .leftJoin(leagues, eq(fixtures.leagueId, leagues.id))
+    .leftJoin(seasons, eq(fixtures.seasonId, seasons.id))
+    .$dynamic();
+
+  const conditions: any[] = [];
+
+  if (filters.fixtureId) {
+    conditions.push(eq(odds.fixtureId, filters.fixtureId));
+  }
+  if (filters.leagueId) {
+    conditions.push(eq(fixtures.leagueId, filters.leagueId));
+  }
+  if (filters.season) {
+    conditions.push(eq(seasons.year, filters.season));
+  }
+  if (filters.bookmaker) {
+    conditions.push(eq(odds.bookmaker, filters.bookmaker));
+  }
+  if (filters.bet) {
+    conditions.push(eq(odds.bet, filters.bet));
+  }
+
+  if (conditions.length > 0) {
+    query = query.where(and(...conditions));
+  }
+
+  return await query;
+}
+
+export async function getPredictions(filters: {
+  fixtureId?: number;
+  leagueId?: number;
+  season?: number;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+
+  let query = db
+    .select({
+      prediction: predictions,
+      fixture: fixtures,
+      league: leagues,
+      season: seasons,
+    })
+    .from(predictions)
+    .leftJoin(fixtures, eq(predictions.fixtureId, fixtures.id))
+    .leftJoin(leagues, eq(fixtures.leagueId, leagues.id))
+    .leftJoin(seasons, eq(fixtures.seasonId, seasons.id))
+    .$dynamic();
+
+  const conditions: any[] = [];
+
+  if (filters.fixtureId) {
+    conditions.push(eq(predictions.fixtureId, filters.fixtureId));
+  }
+  if (filters.leagueId) {
+    conditions.push(eq(fixtures.leagueId, filters.leagueId));
+  }
+  if (filters.season) {
+    conditions.push(eq(seasons.year, filters.season));
+  }
+
+  if (conditions.length > 0) {
+    query = query.where(and(...conditions));
+  }
+
+  return await query;
+}
+
+export async function getEloRating(teamId: number, seasonId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const { eloRatings } = await import("../drizzle/schema");
+
+  const result = await db
+    .select()
+    .from(eloRatings)
+    .where(and(eq(eloRatings.teamId, teamId), eq(eloRatings.seasonId, seasonId)))
+    .limit(1);
+
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function upsertEloRating(rating: {
+  teamId: number;
+  seasonId: number;
+  rating: number;
+  matchesPlayed: number;
+}) {
+  const db = await getDb();
+  if (!db) return;
+
+  const { eloRatings } = await import("../drizzle/schema");
+
+  await db
+    .insert(eloRatings)
+    .values({
+      teamId: rating.teamId,
+      seasonId: rating.seasonId,
+      rating: rating.rating.toString(),
+      matchesPlayed: rating.matchesPlayed,
+      lastUpdated: new Date(),
+    })
+    .onDuplicateKeyUpdate({
+      set: {
+        rating: rating.rating.toString(),
+        matchesPlayed: rating.matchesPlayed,
+        lastUpdated: new Date(),
+      },
+    });
+}
+
+export async function getTeamStats(teamId: number, seasonId: number, isHome?: boolean) {
+  const db = await getDb();
+  if (!db) return null;
+
+  // Build query based on home/away filter
+  const conditions = [
+    eq(fixtures.seasonId, seasonId),
+    or(eq(fixtures.homeTeamId, teamId), eq(fixtures.awayTeamId, teamId)),
+    eq(fixtures.statusShort, "FT")
+  ];
+
+  if (isHome !== undefined) {
+    if (isHome) {
+      conditions.push(eq(fixtures.homeTeamId, teamId));
+    } else {
+      conditions.push(eq(fixtures.awayTeamId, teamId));
+    }
+  }
+
+  const result = await db
+    .select({
+      goalsScored: sql<number>`SUM(CASE WHEN ${fixtures.homeTeamId} = ${teamId} THEN ${fixtures.goalsHome} WHEN ${fixtures.awayTeamId} = ${teamId} THEN ${fixtures.goalsAway} ELSE 0 END)`,
+      goalsConceded: sql<number>`SUM(CASE WHEN ${fixtures.homeTeamId} = ${teamId} THEN ${fixtures.goalsAway} WHEN ${fixtures.awayTeamId} = ${teamId} THEN ${fixtures.goalsHome} ELSE 0 END)`,
+      matchesPlayed: sql<number>`COUNT(*)`,
+    })
+    .from(fixtures)
+    .where(and(...conditions));
+
+  return result.length > 0 ? result[0] : null;
+}

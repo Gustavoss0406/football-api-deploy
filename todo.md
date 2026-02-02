@@ -209,3 +209,48 @@
 - [ ] Teste: idempotência de workers (executar 2x não duplica)
 - [ ] Teste: cache multi-camadas funciona
 - [ ] Teste: TTL de cache está correto
+
+
+## Fase: Odds e Predictions (Modelos Estatísticos)
+
+### Modelo de Fair Odds (Poisson Regression)
+- [x] Implementar cálculo de expected goals (xG) por time
+- [x] Implementar distribuição de Poisson para probabilidades de gols
+- [x] Calcular probabilidades de vitória/empate/derrota
+- [x] Converter probabilidades em fair odds
+- [x] Suporte a edge cases (times sem histórico suficiente)
+
+### Sistema de Ratings ELO
+- [x] Implementar cálculo de ELO rating por time
+- [x] Atualizar ratings após cada partida
+- [x] Calcular probabilidades baseadas em diferença de ELO
+- [x] Gerar predictions (winner, goals, advice)
+- [ ] Persistir histórico de ratings
+
+### Endpoints da API
+- [x] GET /odds - Odds para fixtures com schema API-Football
+- [x] GET /predictions - Predictions para fixtures com schema API-Football
+- [x] Normalização de respostas para paridade total
+- [ ] Testes unitários para odds e predictions
+
+### Validação com Dados Mock
+- [x] Validar comportamento dos modelos com dados mock (50 testes passando)
+- [x] Testar edge cases (sem histórico, empates, goleadas)
+- [x] Verificar consistência temporal dos ratings
+- [x] Validar formato de resposta com API-Football
+
+## Fase: Substituição de Dados Mock por Reais
+
+### Integração com Fontes Reais
+- [ ] Configurar ingestão de dados do football-data.org
+- [ ] Popular banco com dados históricos reais
+- [ ] Recalibrar modelos com dados reais
+- [ ] Validar consistência temporal com dados reais
+
+## Fase: Documentação Final
+
+### OpenAPI/Swagger
+- [ ] Gerar especificação OpenAPI completa
+- [ ] Documentar todos os endpoints com exemplos
+- [ ] Incluir schemas de request/response
+- [ ] Demonstrar paridade completa com API-Football
