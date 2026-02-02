@@ -11,14 +11,27 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
 
-  // Body parser (necessário para uploads / payloads grandes)
+  // --------------------------------------------------
+  // Basic middlewares
+  // --------------------------------------------------
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
+  // --------------------------------------------------
+  // Health check (REST, simples, sem dependências)
+  // --------------------------------------------------
+  app.get("/health", (_req, res) => {
+    res.status(200).json({ ok: true });
+  });
+
+  // --------------------------------------------------
   // OAuth routes
+  // --------------------------------------------------
   registerOAuthRoutes(app);
 
+  // --------------------------------------------------
   // tRPC API
+  // --------------------------------------------------
   app.use(
     "/api/trpc",
     createExpressMiddleware({
@@ -27,14 +40,18 @@ async function startServer() {
     })
   );
 
-  // Dev usa Vite | Prod serve arquivos estáticos
+  // --------------------------------------------------
+  // Frontend (Vite dev / Static prod)
+  // --------------------------------------------------
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
 
-  // 🚨 RENDER / PRODUÇÃO SAFE PORT BIND
+  // --------------------------------------------------
+  // Render / Production-safe port binding
+  // --------------------------------------------------
   const port = Number(process.env.PORT) || 3000;
 
   server.listen(port, "0.0.0.0", () => {
