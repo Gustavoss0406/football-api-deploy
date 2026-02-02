@@ -436,4 +436,27 @@ export const footballRouter = router({
   fixturesLineups: fixturesLineupsProcedure,
   fixturesStatistics: fixturesStatisticsProcedure,
   players: playersProcedure,
+  
+  // Sync endpoints (for testing and manual triggers)
+  syncFixtures: publicProcedure.mutation(async () => {
+    try {
+      const { syncFixtures } = await import("./workers/fixtures-sync");
+      const result = await syncFixtures();
+      return createApiResponse([result]);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      return createApiResponse([], [errorMsg]);
+    }
+  }),
+
+  syncStandings: publicProcedure.mutation(async () => {
+    try {
+      const { syncStandings } = await import("./workers/standings-sync");
+      const result = await syncStandings();
+      return createApiResponse([result]);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      return createApiResponse([], [errorMsg]);
+    }
+  }),
 });

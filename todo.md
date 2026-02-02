@@ -113,3 +113,58 @@
 - [ ] Integração com football-data.org
 - [ ] Cache agressivo e fallback
 - [ ] Sistema de retry e error handling
+
+
+## Fase: Sistema de Ingestão Automatizada (Prioridade Máxima)
+
+### Arquitetura
+- [x] Projetar arquitetura de workers de sincronização
+- [x] Definir estratégia de cache e fallback
+- [x] Garantir consistência temporal (dados não somem)
+- [x] Documentar fluxo de dados e dependências
+
+### Workers de Sincronização
+- [x] Worker para sincronização de fixtures do football-data.org
+- [x] Worker para sincronização de standings
+- [ ] Worker para sincronização de players
+- [ ] Worker para sincronização de events, lineups, statistics
+- [ ] Scheduler para execução periódica dos workers
+
+### Persistência e Cache
+- [x] Persistência local como fonte primária
+- [x] Cache em múltiplas camadas (Edge, KV, D1)
+- [x] Fallback para dados históricos quando upstream falha
+- [x] Versionamento de dados para auditoria
+
+### Testes e Validação
+- [ ] Testes de consistência temporal
+- [ ] Testes de fallback e recuperação
+- [ ] Validação de sincronização periódica
+- [ ] Checkpoint de consistência
+
+## Fase: Endpoints Restantes (Após Ingestão)
+
+### Implementação
+- [ ] GET /injuries - Lesões de jogadores
+- [ ] GET /transfers - Transferências de jogadores
+- [ ] GET /coachs - Informações de técnicos
+- [ ] GET /trophies - Troféus de times e jogadores
+
+### Validação
+- [ ] Testes unitários para endpoints restantes
+- [ ] Validação de paridade estrutural
+- [ ] Edge cases validados
+
+## Fase: Odds e Predictions (Após Ingestão + Endpoints)
+
+### Modelos Estatísticos
+- [ ] Implementar modelo Poisson para fair odds
+- [ ] Implementar sistema ELO para predictions
+- [ ] Isolar modelos em módulo próprio
+- [ ] Testes de precisão dos modelos
+
+### Endpoints
+- [ ] GET /odds - Odds calculadas internamente
+- [ ] GET /predictions - Previsões de partidas
+- [ ] Schema idêntico à API-Football
+- [ ] Validação de paridade estrutural
