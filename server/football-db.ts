@@ -8,18 +8,14 @@
 import { eq, and, or, gte, lte, like, desc, asc, sql, inArray } from "drizzle-orm";
 import { getDb } from "./db";
 import {
-  countries,
-  leagues,
-  seasons,
-  teams,
-  venues,
-  fixtures,
-  standings,
-  players,
-  odds,
-  predictions,
-  users,
+  countries, leagues, seasons, teams, venues, fixtures, standings,
+  players, playerStatistics, coaches, transfers, injuries, trophies,
+  odds, predictions, timezones,
+  fixtureEvents, fixtureLineups, fixtureStatistics,
+  type Country, type League, type Season, type Team, type Venue,
+  type Fixture, type Standing, type Player, type PlayerStatistic
 } from "../drizzle/schema";
+
 
 
 // ============================================================================
