@@ -13,6 +13,17 @@ export const systemRouter = router({
       ok: true,
     })),
 
+  // --------------------------------------------------
+  // Database health check (tRPC)
+  // --------------------------------------------------
+  dbHealth: publicProcedure.query(async ({ ctx }) => {
+    const result = await ctx.db.execute("select 1 as alive");
+    return {
+      ok: true,
+      result,
+    };
+  }),
+
   notifyOwner: adminProcedure
     .input(
       z.object({
