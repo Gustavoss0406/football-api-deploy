@@ -13,15 +13,6 @@ import {
 } from "drizzle-orm/pg-core";
 
 /* =========================
-   ENUMS
-========================= */
-
-export const userRole = ["user", "admin"] as const;
-export const leagueType = ["League", "Cup"] as const;
-export const trophyEntity = ["player", "coach"] as const;
-export const ingestionStatus = ["success", "failure", "partial"] as const;
-
-/* =========================
    USERS
 ========================= */
 
@@ -117,6 +108,21 @@ export const teams = pgTable("teams", {
 });
 
 /* =========================
+   PLAYERS  ✅ (ANTES DE FIXTURES)
+========================= */
+
+export const players = pgTable("players", {
+  id: serial("id").primaryKey(),
+  externalId: integer("external_id"),
+  name: varchar("name", { length: 255 }).notNull(),
+  nationality: varchar("nationality", { length: 100 }),
+  age: integer("age"),
+  photo: text("photo"),
+  injured: boolean("injured").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+/* =========================
    FIXTURES
 ========================= */
 
@@ -134,21 +140,6 @@ export const fixtures = pgTable("fixtures", {
   awayTeamId: integer("away_team_id").notNull().references(() => teams.id),
   goalsHome: integer("goals_home"),
   goalsAway: integer("goals_away"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-/* =========================
-   TROPHIES
-========================= */
-
-export const trophies = pgTable("trophies", {
-  id: serial("id").primaryKey(),
-  entityType: varchar("entity_type", { length: 16 }).notNull(), // player | coach
-  entityId: integer("entity_id").notNull(),
-  league: varchar("league", { length: 255 }).notNull(),
-  country: varchar("country", { length: 255 }).notNull(),
-  season: varchar("season", { length: 50 }).notNull(),
-  place: varchar("place", { length: 50 }).notNull(), // Winner, Runner-up, etc
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -183,19 +174,8 @@ export const fixtureStatistics = pgTable("fixture_statistics", {
 });
 
 /* =========================
-   PLAYERS
+   PLAYER STATISTICS
 ========================= */
-
-export const players = pgTable("players", {
-  id: serial("id").primaryKey(),
-  externalId: integer("external_id"),
-  name: varchar("name", { length: 255 }).notNull(),
-  nationality: varchar("nationality", { length: 100 }),
-  age: integer("age"),
-  photo: text("photo"),
-  injured: boolean("injured").default(false).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
 
 export const playerStatistics = pgTable("player_statistics", {
   id: serial("id").primaryKey(),
@@ -257,6 +237,21 @@ export const predictions = pgTable("predictions", {
   id: serial("id").primaryKey(),
   fixtureId: integer("fixture_id").notNull().references(() => fixtures.id),
   advice: text("advice"),
+});
+
+/* =========================
+   TROPHIES
+========================= */
+
+export const trophies = pgTable("trophies", {
+  id: serial("id").primaryKey(),
+  entityType: varchar("entity_type", { length: 16 }).notNull(),
+  entityId: integer("entity_id").notNull(),
+  league: varchar("league", { length: 255 }).notNull(),
+  country: varchar("country", { length: 255 }).notNull(),
+  season: varchar("season", { length: 50 }).notNull(),
+  place: varchar("place", { length: 50 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 /* =========================
