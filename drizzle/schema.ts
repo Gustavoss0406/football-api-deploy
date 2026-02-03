@@ -138,6 +138,21 @@ export const fixtures = pgTable("fixtures", {
 });
 
 /* =========================
+   TROPHIES
+========================= */
+
+export const trophies = pgTable("trophies", {
+  id: serial("id").primaryKey(),
+  entityType: varchar("entity_type", { length: 16 }).notNull(), // player | coach
+  entityId: integer("entity_id").notNull(),
+  league: varchar("league", { length: 255 }).notNull(),
+  country: varchar("country", { length: 255 }).notNull(),
+  season: varchar("season", { length: 50 }).notNull(),
+  place: varchar("place", { length: 50 }).notNull(), // Winner, Runner-up, etc
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+/* =========================
    FIXTURE DETAILS
 ========================= */
 
