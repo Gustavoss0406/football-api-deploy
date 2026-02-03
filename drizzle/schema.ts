@@ -8,22 +8,22 @@ import {
   boolean,
   numeric,
   jsonb,
+  uniqueIndex,
   index,
-  unique,
 } from "drizzle-orm/pg-core";
 
-/* ============================================================================
+/* =========================
    ENUMS
-============================================================================ */
+========================= */
 
 export const userRole = ["user", "admin"] as const;
 export const leagueType = ["League", "Cup"] as const;
 export const trophyEntity = ["player", "coach"] as const;
 export const ingestionStatus = ["success", "failure", "partial"] as const;
 
-/* ============================================================================
-   USERS / AUTH
-============================================================================ */
+/* =========================
+   USERS
+========================= */
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -31,19 +31,17 @@ export const users = pgTable("users", {
   name: text("name"),
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("login_method", { length: 64 }),
-  role: varchar("role", { length: 16 }).notNull().default("user"),
+  role: varchar("role", { length: 16 }).default("user").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   lastSignedIn: timestamp("last_signed_in").defaultNow().notNull(),
 }, (t) => ({
-  openIdIdx: unique("users_open_id_unique").on(t.openId),
+  openIdUnique: uniqueIndex("users_open_id_unique").on(t.openId),
 }));
 
-export type User = typeof users.$inferSelect;
-
-/* ============================================================================
-   CORE ENTITIES
-============================================================================ */
+/* =========================
+   COUNTRIES
+========================= */
 
 export const countries = pgTable("countries", {
   id: serial("id").primaryKey(),
@@ -52,10 +50,11 @@ export const countries = pgTable("countries", {
   flag: text("flag"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-}, (t) => ({
-  nameIdx: index("countries_name_idx").on(t.name),
-  codeIdx: index("countries_code_idx").on(t.code),
-}));
+});
+
+/* =========================
+   VENUES
+========================= */
 
 export const venues = pgTable("venues", {
   id: serial("id").primaryKey(),
@@ -70,6 +69,10 @@ export const venues = pgTable("venues", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+/* =========================
+   LEAGUES
+========================= */
+
 export const leagues = pgTable("leagues", {
   id: serial("id").primaryKey(),
   apiFootballId: integer("api_football_id"),
@@ -79,9 +82,11 @@ export const leagues = pgTable("leagues", {
   countryId: integer("country_id").references(() => countries.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-}, (t) => ({
-  apiIdx: unique("leagues_api_football_id_unique").on(t.apiFootballId),
-}));
+});
+
+/* =========================
+   SEASONS
+========================= */
 
 export const seasons = pgTable("seasons", {
   id: serial("id").primaryKey(),
@@ -92,9 +97,11 @@ export const seasons = pgTable("seasons", {
   current: boolean("current").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-}, (t) => ({
-  leagueYearIdx: unique("seasons_league_year_unique").on(t.leagueId, t.year),
-}));
+});
+
+/* =========================
+   TEAMS
+========================= */
 
 export const teams = pgTable("teams", {
   id: serial("id").primaryKey(),
@@ -109,9 +116,9 @@ export const teams = pgTable("teams", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-/* ============================================================================
+/* =========================
    FIXTURES
-============================================================================ */
+========================= */
 
 export const fixtures = pgTable("fixtures", {
   id: serial("id").primaryKey(),
@@ -130,9 +137,39 @@ export const fixtures = pgTable("fixtures", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-/* ============================================================================
-   PLAYERS & STATS
-============================================================================ */
+/* =========================
+   FIXTURE DETAILS
+========================= */
+
+export const fixtureEvents = pgTable("fixture_events", {
+  id: serial("id").primaryKey(),
+  fixtureId: integer("fixture_id").notNull().references(() => fixtures.id),
+  teamId: integer("team_id").notNull().references(() => teams.id),
+  playerId: integer("player_id").references(() => players.id),
+  timeElapsed: integer("time_elapsed").notNull(),
+  type: varchar("type", { length: 50 }).notNull(),
+  detail: varchar("detail", { length: 100 }),
+});
+
+export const fixtureLineups = pgTable("fixture_lineups", {
+  id: serial("id").primaryKey(),
+  fixtureId: integer("fixture_id").notNull().references(() => fixtures.id),
+  teamId: integer("team_id").notNull().references(() => teams.id),
+  formation: varchar("formation", { length: 20 }),
+  startXI: jsonb("start_xi").notNull(),
+  substitutes: jsonb("substitutes").notNull(),
+});
+
+export const fixtureStatistics = pgTable("fixture_statistics", {
+  id: serial("id").primaryKey(),
+  fixtureId: integer("fixture_id").notNull().references(() => fixtures.id),
+  teamId: integer("team_id").notNull().references(() => teams.id),
+  statistics: jsonb("statistics").notNull(),
+});
+
+/* =========================
+   PLAYERS
+========================= */
 
 export const players = pgTable("players", {
   id: serial("id").primaryKey(),
@@ -151,12 +188,12 @@ export const playerStatistics = pgTable("player_statistics", {
   teamId: integer("team_id").notNull().references(() => teams.id),
   leagueId: integer("league_id").notNull().references(() => leagues.id),
   seasonId: integer("season_id").notNull().references(() => seasons.id),
-  rating: numeric("rating", { precision: 4, scale: 2 }),
+  statistics: jsonb("statistics").notNull(),
 });
 
-/* ============================================================================
-   COACHES, TRANSFERS, INJURIES
-============================================================================ */
+/* =========================
+   COACHES / TRANSFERS / INJURIES
+========================= */
 
 export const coaches = pgTable("coaches", {
   id: serial("id").primaryKey(),
@@ -167,9 +204,9 @@ export const coaches = pgTable("coaches", {
 export const transfers = pgTable("transfers", {
   id: serial("id").primaryKey(),
   playerId: integer("player_id").notNull().references(() => players.id),
-  date: timestamp("date").notNull(),
   teamInId: integer("team_in_id").references(() => teams.id),
   teamOutId: integer("team_out_id").references(() => teams.id),
+  date: timestamp("date").notNull(),
 });
 
 export const injuries = pgTable("injuries", {
@@ -180,9 +217,18 @@ export const injuries = pgTable("injuries", {
   date: timestamp("date").notNull(),
 });
 
-/* ============================================================================
-   ODDS, PREDICTIONS, ELO
-============================================================================ */
+/* =========================
+   STANDINGS / ODDS / PREDICTIONS
+========================= */
+
+export const standings = pgTable("standings", {
+  id: serial("id").primaryKey(),
+  leagueId: integer("league_id").notNull().references(() => leagues.id),
+  seasonId: integer("season_id").notNull().references(() => seasons.id),
+  teamId: integer("team_id").notNull().references(() => teams.id),
+  rank: integer("rank").notNull(),
+  points: integer("points").notNull(),
+});
 
 export const odds = pgTable("odds", {
   id: serial("id").primaryKey(),
@@ -198,16 +244,16 @@ export const predictions = pgTable("predictions", {
   advice: text("advice"),
 });
 
+/* =========================
+   ELO / META
+========================= */
+
 export const eloRatings = pgTable("elo_ratings", {
   id: serial("id").primaryKey(),
   teamId: integer("team_id").notNull().references(() => teams.id),
   seasonId: integer("season_id").notNull().references(() => seasons.id),
   rating: numeric("rating", { precision: 7, scale: 2 }).notNull(),
 });
-
-/* ============================================================================
-   MISC
-============================================================================ */
 
 export const timezones = pgTable("timezones", {
   id: serial("id").primaryKey(),
@@ -220,5 +266,4 @@ export const dataIngestionLog = pgTable("data_ingestion_log", {
   entityType: varchar("entity_type", { length: 100 }).notNull(),
   status: varchar("status", { length: 16 }).notNull(),
   startedAt: timestamp("started_at").notNull(),
-  completedAt: timestamp("completed_at"),
 });
