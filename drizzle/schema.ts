@@ -4,63 +4,58 @@ import {
   integer,
   varchar,
   text,
-  boolean,
   timestamp,
+  boolean,
   numeric,
   jsonb,
   index,
   unique,
-  pgEnum,
 } from "drizzle-orm/pg-core";
 
-/* ============================================================
+/* ============================================================================
    ENUMS
-============================================================ */
+============================================================================ */
 
-export const userRoleEnum = pgEnum("user_role", ["user", "admin"]);
-export const leagueTypeEnum = pgEnum("league_type", ["League", "Cup"]);
-export const ingestionStatusEnum = pgEnum("ingestion_status", [
-  "success",
-  "failure",
-  "partial",
-]);
-export const trophyEntityEnum = pgEnum("trophy_entity", ["player", "coach"]);
+export const userRole = ["user", "admin"] as const;
+export const leagueType = ["League", "Cup"] as const;
+export const trophyEntity = ["player", "coach"] as const;
+export const ingestionStatus = ["success", "failure", "partial"] as const;
 
-/* ============================================================
+/* ============================================================================
    USERS / AUTH
-============================================================ */
+============================================================================ */
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
-  openId: varchar("open_id", { length: 64 }).notNull().unique(),
+  openId: varchar("open_id", { length: 64 }).notNull(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("login_method", { length: 64 }),
-  role: userRoleEnum("role").notNull().default("user"),
+  role: varchar("role", { length: 16 }).notNull().default("user"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   lastSignedIn: timestamp("last_signed_in").defaultNow().notNull(),
-});
+}, (t) => ({
+  openIdIdx: unique("users_open_id_unique").on(t.openId),
+}));
 
-/* ============================================================
-   COUNTRIES / VENUES
-============================================================ */
+export type User = typeof users.$inferSelect;
 
-export const countries = pgTable(
-  "countries",
-  {
-    id: serial("id").primaryKey(),
-    name: varchar("name", { length: 255 }).notNull(),
-    code: varchar("code", { length: 3 }),
-    flag: text("flag"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  },
-  (t) => ({
-    nameIdx: index("countries_name_idx").on(t.name),
-    codeIdx: index("countries_code_idx").on(t.code),
-  })
-);
+/* ============================================================================
+   CORE ENTITIES
+============================================================================ */
+
+export const countries = pgTable("countries", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  code: varchar("code", { length: 3 }),
+  flag: text("flag"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  nameIdx: index("countries_name_idx").on(t.name),
+  codeIdx: index("countries_code_idx").on(t.code),
+}));
 
 export const venues = pgTable("venues", {
   id: serial("id").primaryKey(),
@@ -75,47 +70,31 @@ export const venues = pgTable("venues", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-/* ============================================================
-   LEAGUES / SEASONS
-============================================================ */
-
 export const leagues = pgTable("leagues", {
   id: serial("id").primaryKey(),
-  apiFootballId: integer("api_football_id").unique(),
+  apiFootballId: integer("api_football_id"),
   name: varchar("name", { length: 255 }).notNull(),
-  type: leagueTypeEnum("type").notNull(),
+  type: varchar("type", { length: 16 }).notNull(),
   logo: text("logo"),
   countryId: integer("country_id").references(() => countries.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (t) => ({
+  apiIdx: unique("leagues_api_football_id_unique").on(t.apiFootballId),
+}));
 
-export const seasons = pgTable(
-  "seasons",
-  {
-    id: serial("id").primaryKey(),
-    leagueId: integer("league_id")
-      .notNull()
-      .references(() => leagues.id),
-    year: integer("year").notNull(),
-    start: timestamp("start_date").notNull(),
-    end: timestamp("end_date").notNull(),
-    current: boolean("current").default(false).notNull(),
-    coverageFixtures: boolean("coverage_fixtures").default(false).notNull(),
-    coverageStandings: boolean("coverage_standings").default(false).notNull(),
-    coveragePlayers: boolean("coverage_players").default(false).notNull(),
-    coverageOdds: boolean("coverage_odds").default(false).notNull(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  },
-  (t) => ({
-    uniqueSeason: unique("season_unique").on(t.leagueId, t.year),
-  })
-);
-
-/* ============================================================
-   TEAMS
-============================================================ */
+export const seasons = pgTable("seasons", {
+  id: serial("id").primaryKey(),
+  leagueId: integer("league_id").notNull().references(() => leagues.id),
+  year: integer("year").notNull(),
+  start: timestamp("start").notNull(),
+  end: timestamp("end").notNull(),
+  current: boolean("current").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  leagueYearIdx: unique("seasons_league_year_unique").on(t.leagueId, t.year),
+}));
 
 export const teams = pgTable("teams", {
   id: serial("id").primaryKey(),
@@ -130,9 +109,9 @@ export const teams = pgTable("teams", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-/* ============================================================
+/* ============================================================================
    FIXTURES
-============================================================ */
+============================================================================ */
 
 export const fixtures = pgTable("fixtures", {
   id: serial("id").primaryKey(),
@@ -142,26 +121,18 @@ export const fixtures = pgTable("fixtures", {
   venueId: integer("venue_id").references(() => venues.id),
   statusLong: varchar("status_long", { length: 100 }).notNull(),
   statusShort: varchar("status_short", { length: 10 }).notNull(),
-  leagueId: integer("league_id")
-    .notNull()
-    .references(() => leagues.id),
-  seasonId: integer("season_id")
-    .notNull()
-    .references(() => seasons.id),
-  homeTeamId: integer("home_team_id")
-    .notNull()
-    .references(() => teams.id),
-  awayTeamId: integer("away_team_id")
-    .notNull()
-    .references(() => teams.id),
+  leagueId: integer("league_id").notNull().references(() => leagues.id),
+  seasonId: integer("season_id").notNull().references(() => seasons.id),
+  homeTeamId: integer("home_team_id").notNull().references(() => teams.id),
+  awayTeamId: integer("away_team_id").notNull().references(() => teams.id),
   goalsHome: integer("goals_home"),
   goalsAway: integer("goals_away"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-/* ============================================================
-   PLAYERS
-============================================================ */
+/* ============================================================================
+   PLAYERS & STATS
+============================================================================ */
 
 export const players = pgTable("players", {
   id: serial("id").primaryKey(),
@@ -174,75 +145,80 @@ export const players = pgTable("players", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-/* ============================================================
-   STANDINGS
-============================================================ */
+export const playerStatistics = pgTable("player_statistics", {
+  id: serial("id").primaryKey(),
+  playerId: integer("player_id").notNull().references(() => players.id),
+  teamId: integer("team_id").notNull().references(() => teams.id),
+  leagueId: integer("league_id").notNull().references(() => leagues.id),
+  seasonId: integer("season_id").notNull().references(() => seasons.id),
+  rating: numeric("rating", { precision: 4, scale: 2 }),
+});
 
-export const standings = pgTable(
-  "standings",
-  {
-    id: serial("id").primaryKey(),
-    leagueId: integer("league_id")
-      .notNull()
-      .references(() => leagues.id),
-    seasonId: integer("season_id")
-      .notNull()
-      .references(() => seasons.id),
-    teamId: integer("team_id")
-      .notNull()
-      .references(() => teams.id),
-    rank: integer("rank").notNull(),
-    points: integer("points").notNull(),
-    goalsDiff: integer("goals_diff").notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  },
-  (t) => ({
-    uniqueStanding: unique("standing_unique").on(
-      t.leagueId,
-      t.seasonId,
-      t.teamId
-    ),
-  })
-);
+/* ============================================================================
+   COACHES, TRANSFERS, INJURIES
+============================================================================ */
 
-/* ============================================================
-   ODDS & PREDICTIONS
-============================================================ */
+export const coaches = pgTable("coaches", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  teamId: integer("team_id").references(() => teams.id),
+});
+
+export const transfers = pgTable("transfers", {
+  id: serial("id").primaryKey(),
+  playerId: integer("player_id").notNull().references(() => players.id),
+  date: timestamp("date").notNull(),
+  teamInId: integer("team_in_id").references(() => teams.id),
+  teamOutId: integer("team_out_id").references(() => teams.id),
+});
+
+export const injuries = pgTable("injuries", {
+  id: serial("id").primaryKey(),
+  playerId: integer("player_id").notNull().references(() => players.id),
+  teamId: integer("team_id").notNull().references(() => teams.id),
+  fixtureId: integer("fixture_id").references(() => fixtures.id),
+  date: timestamp("date").notNull(),
+});
+
+/* ============================================================================
+   ODDS, PREDICTIONS, ELO
+============================================================================ */
 
 export const odds = pgTable("odds", {
   id: serial("id").primaryKey(),
-  fixtureId: integer("fixture_id")
-    .notNull()
-    .references(() => fixtures.id),
+  fixtureId: integer("fixture_id").notNull().references(() => fixtures.id),
   bookmaker: varchar("bookmaker", { length: 100 }),
   bet: varchar("bet", { length: 100 }).notNull(),
   values: jsonb("values").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const predictions = pgTable("predictions", {
   id: serial("id").primaryKey(),
-  fixtureId: integer("fixture_id")
-    .notNull()
-    .references(() => fixtures.id),
+  fixtureId: integer("fixture_id").notNull().references(() => fixtures.id),
   advice: text("advice"),
-  percentHome: numeric("percent_home", { precision: 5, scale: 2 }),
-  percentDraw: numeric("percent_draw", { precision: 5, scale: 2 }),
-  percentAway: numeric("percent_away", { precision: 5, scale: 2 }),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-/* ============================================================
-   INGESTION LOG
-============================================================ */
+export const eloRatings = pgTable("elo_ratings", {
+  id: serial("id").primaryKey(),
+  teamId: integer("team_id").notNull().references(() => teams.id),
+  seasonId: integer("season_id").notNull().references(() => seasons.id),
+  rating: numeric("rating", { precision: 7, scale: 2 }).notNull(),
+});
+
+/* ============================================================================
+   MISC
+============================================================================ */
+
+export const timezones = pgTable("timezones", {
+  id: serial("id").primaryKey(),
+  timezone: varchar("timezone", { length: 100 }).notNull(),
+});
 
 export const dataIngestionLog = pgTable("data_ingestion_log", {
   id: serial("id").primaryKey(),
   source: varchar("source", { length: 100 }).notNull(),
   entityType: varchar("entity_type", { length: 100 }).notNull(),
-  status: ingestionStatusEnum("status").notNull(),
-  recordsProcessed: integer("records_processed").default(0).notNull(),
-  errorMessage: text("error_message"),
+  status: varchar("status", { length: 16 }).notNull(),
   startedAt: timestamp("started_at").notNull(),
   completedAt: timestamp("completed_at"),
 });
