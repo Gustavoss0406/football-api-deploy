@@ -2,13 +2,13 @@ import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
+import { Pool } from "pg";
+
+import { footballRestRouter } from "../rest/football";
 import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
-
-// DB (temporário aqui para evitar problema de bundle)
-import { Pool } from "pg";
 
 async function startServer() {
   const app = express();
@@ -52,12 +52,17 @@ async function startServer() {
   });
 
   // --------------------------------------------------
+  // ✅ REST PÚBLICO (O QUE VOCÊ QUER)
+  // --------------------------------------------------
+  app.use("/api/public", footballRestRouter);
+
+  // --------------------------------------------------
   // OAuth routes
   // --------------------------------------------------
   registerOAuthRoutes(app);
 
   // --------------------------------------------------
-  // tRPC API
+  // tRPC API (interna / tipada)
   // --------------------------------------------------
   app.use(
     "/api/trpc",
